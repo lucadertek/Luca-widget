@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#03040a">
+  <meta name="description" content="Luca Widget - Sistema 69 e Calendario Lunare sulla tua home screen">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Luca Widget">
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%2303040a' width='192' height='192'/><circle cx='96' cy='96' r='80' fill='%23c8cfe0' opacity='0.1'/><circle cx='96' cy='96' r='60' fill='%2300d4ff' opacity='0.3'/></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%2303040a' width='180' height='180' rx='40'/><circle cx='90' cy='90' r='70' fill='%23c8cfe0' opacity='0.1'/><circle cx='90' cy='90' r='50' fill='%2300d4ff' opacity='0.3'/></svg>">
+  
+  <title>Luca Widget</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --void:    #03040a;
+      --deep:    #080a14;
+      --silver:  #c8cfe0;
+      --moonlit: #eaedf5;
+      --cyan:    #00d4ff;
+      --magenta: #ff006e;
+      --gold:    #a08c5a;
+      --dim:     #2e3550;
+      --mid:     #4a6070;
+      --border:  rgba(200,207,224,0.07);
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: var(--void);
+      color: var(--silver);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      font-family: 'Share Tech Mono', monospace;
+      position: fixed;
+    }
+
+    /* Scanlines */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 3px,
+        rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.15) 4px
+      );
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* Grid bg */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
+      background-size: 36px 36px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Stars */
+    #stars {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      background: white;
+      animation: twinkle var(--d,3s) ease-in-out infinite;
+      animation-delay: var(--del,0s);
+    }
+    @keyframes twinkle {
+      0%,100% { opacity: var(--lo,.05); }
+      50%      { opacity: var(--hi,.5); }
+    }
+
+    /* Main wrapper */
+    .wrap {
+      position: relative;
+      z-index: 10;
+      width: min(95vw, 600px);
+      padding: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      max-height: 95vh;
+      overflow-y: auto;
+    }
+
+    /* ── TOP HEADER ── */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 0.7rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 0.8rem;
+      opacity: 0;
+      animation: rise 0.8s ease forwards 0.1s;
+    }
+
+    .sys-title {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: clamp(0.75rem, 2vw, 1rem);
+      color: var(--cyan);
+      letter-spacing: 0.18em;
+      text-shadow: 0 0 20px var(--cyan);
+    }
+
+    .sys-sub {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.55rem;
+      letter-spacing: 0.25em;
+      color: var(--mid);
+      text-transform: uppercase;
+    }
+
+    .pulse { width: 7px; height: 7px; border-radius: 50%; background: #39ff14; box-shadow: 0 0 8px #39ff14; animation: pb 1s ease-in-out infinite; }
+    @keyframes pb { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(1.6);opacity:.4;} }
+
+    /* ── LUNAR SECTION ── */
+    .lunar-section {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 1rem;
+      align-items: center;
+      padding: 1rem;
+      border: 1px solid var(--border);
+      margin-bottom: 0.6rem;
+      position: relative;
+      overflow: hidden;
+      opacity: 0;
+      animation: rise 0.8s ease forwards 0.3s;
+    }
+
+    .lunar-section::before {
+      content: 'CALENDARIO LUNARE';
+      position: absolute;
+      top: -0.45rem;
+      left: 0.8rem;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.45rem;
+      letter-spacing: 0.35em;
+      color: var(--mid);
+      background: var(--void);
+      padding: 0 0.4rem;
+    }
+
+    /* Moon */
+    .moon-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .moon-float { animation: float 7s ease-in-out infinite; }
+    @keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-6px);} }
+
+    canvas#mc {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      display: block;
+    }
+
+    .phase-name {
+      font-family: 'IM Fell English', serif;
+      font-style: italic;
+      font-size: 0.62rem;
+      color: var(--mid);
+      letter-spacing: 0.12em;
+      text-align: center;
+    }
+
+    /* Calendar data */
+    .cal-data {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .cal-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+    }
+
+    .cal-lbl {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.52rem;
+      letter-spacing: 0.2em;
+      color: var(--mid);
+      text-transform: uppercase;
+      width: 50px;
+      flex-shrink: 0;
+    }
+
+    .cal-val-anno {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      color: var(--cyan);
+      text-shadow: 0 0 15px rgba(0,212,255,0.3);
+      line-height: 1;
+    }
+
+    .cal-val-mese {
+      font-family: 'IM Fell English', serif;
+      font-style: italic;
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      color: var(--moonlit);
+      line-height: 1;
+    }
+
+    .cal-val-mese-num {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--mid);
+      margin-left: 0.3rem;
+    }
+
+    .cal-val-giorno {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      color: var(--silver);
+      line-height: 1;
+    }
+
+    .cal-val-giorno span {
+      font-size: 0.6rem;
+      color: var(--mid);
+      font-family: 'Share Tech Mono', monospace;
+      margin-left: 0.3rem;
+    }
+
+    .cal-val-weekday {
+      font-family: 'IM Fell English', serif;
+      font-style: italic;
+      font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+      color: var(--gold);
+      text-shadow: 0 0 12px rgba(160,140,90,0.3);
+      line-height: 1;
+    }
+
+    /* Full moons count */
+    .fm-count {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.58rem;
+      color: rgba(200,207,224,0.3);
+      letter-spacing: 0.15em;
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0.2rem 0;
+      opacity: 0;
+      animation: rise 0.8s ease forwards 0.5s;
+    }
+    .div-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(0,212,255,0.2), transparent); }
+    .div-text { font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; letter-spacing: 0.4em; color: var(--mid); text-transform: uppercase; }
+
+    /* ── SISTEMA 69 SECTION ── */
+    .s69-section {
+      border: 1px solid var(--border);
+      padding: 1rem;
+      position: relative;
+      overflow: hidden;
+      opacity: 0;
+      animation: rise 0.8s ease forwards 0.6s;
+    }
+
+    .s69-section::before {
+      content: 'SISTEMA 69 — TEMPO';
+      position: absolute;
+      top: -0.45rem;
+      left: 0.8rem;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.45rem;
+      letter-spacing: 0.35em;
+      color: var(--mid);
+      background: var(--void);
+      padding: 0 0.4rem;
+    }
+
+    .s69-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .s69-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .s69-lbl {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(0.5rem, 1.4vw, 0.65rem);
+      letter-spacing: 0.15em;
+      width: 80px;
+      flex-shrink: 0;
+      line-height: 1.2;
+    }
+
+    .s69-row:nth-child(odd)  .s69-lbl { color: var(--cyan);    text-shadow: 0 0 10px rgba(0,212,255,0.3); }
+    .s69-row:nth-child(even) .s69-lbl { color: var(--magenta); text-shadow: 0 0 10px rgba(255,0,110,0.3); }
+
+    .s69-sub {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.42rem;
+      color: var(--dim);
+      letter-spacing: 0.1em;
+      display: block;
+      margin-top: 0.1rem;
+    }
+
+    .s69-val {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: clamp(1rem, 3vw, 1.6rem);
+      line-height: 1;
+      min-width: 2.2ch;
+      text-align: right;
+    }
+
+    .s69-row:nth-child(odd)  .s69-val { color: var(--cyan);    text-shadow: 0 0 18px rgba(0,212,255,0.35); }
+    .s69-row:nth-child(even) .s69-val { color: var(--magenta); text-shadow: 0 0 18px rgba(255,0,110,0.35); }
+
+    .s69-of {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.55rem;
+      color: var(--mid);
+      flex-shrink: 0;
+    }
+
+    .bar-wrap { flex: 1; display: flex; align-items: center; }
+    .bar-track { width: 100%; height: 2px; background: rgba(255,255,255,0.05); border-radius: 1px; }
+    .bar-fill { height: 2px; border-radius: 1px; transition: width 0.08s linear; position: relative; }
+    .bar-fill::after { content:''; position:absolute; right:-1px; top:-3px; width:8px; height:8px; border-radius:50%; background:inherit; box-shadow:0 0 8px currentColor; }
+    .s69-row:nth-child(odd)  .bar-fill { background: var(--cyan);    color: var(--cyan); }
+    .s69-row:nth-child(even) .bar-fill { background: var(--magenta); color: var(--magenta); }
+
+    /* ── FOOTER ── */
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 0.6rem;
+      border-top: 1px solid var(--border);
+      margin-top: 0.6rem;
+      opacity: 0;
+      animation: rise 0.8s ease forwards 0.9s;
+    }
+    .footer-txt {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.5rem;
+      color: var(--mid);
+      letter-spacing: 0.15em;
+      line-height: 1.6;
+    }
+    .footer-txt span { color: rgba(0,212,255,0.4); }
+
+    @keyframes rise {
+      from { opacity:0; transform: translateY(10px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 480px) {
+      .wrap {
+        padding: 0.8rem;
+        width: 98vw;
+      }
+      
+      .lunar-section {
+        grid-template-columns: 80px 1fr;
+        gap: 0.8rem;
+        padding: 0.8rem;
+      }
+      
+      canvas#mc {
+        width: 70px;
+        height: 70px;
+      }
+      
+      .s69-lbl {
+        width: 70px;
+        font-size: 0.55rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="stars"></div>
+
+<div class="wrap">
+
+  <div class="top-bar">
+    <div>
+      <div class="sys-title">LUCE DEL FIUME</div>
+      <div class="sys-sub">Calendario Lunare · Sistema 69</div>
+    </div>
+    <div class="pulse"></div>
+  </div>
+
+  <!-- LUNAR SECTION -->
+  <div class="lunar-section">
+    <div class="moon-wrap">
+      <div class="moon-float">
+        <canvas id="mc" width="160" height="160"></canvas>
+      </div>
+      <div class="phase-name" id="phaseName">—</div>
+    </div>
+    <div class="cal-data">
+      <div class="cal-row">
+        <span class="cal-lbl">Anno</span>
+        <span class="cal-val-anno" id="cAnno">—</span>
+      </div>
+      <div class="cal-row">
+        <span class="cal-lbl">Mese</span>
+        <span class="cal-val-mese" id="cMese">—</span>
+        <span class="cal-val-mese-num" id="cMeseNum"></span>
+      </div>
+      <div class="cal-row">
+        <span class="cal-lbl">Giorno</span>
+        <span class="cal-val-giorno" id="cGiorno">—<span>/ 28</span></span>
+      </div>
+      <div class="cal-row">
+        <span class="cal-lbl">Giorno</span>
+        <span class="cal-val-weekday" id="cWeekday">—</span>
+      </div>
+      <div class="cal-row">
+        <span class="fm-count" id="fmCount">— lune piene dalla nascita</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider">
+    <div class="div-line"></div>
+    <div class="div-text">ora · sistema 69</div>
+    <div class="div-line"></div>
+  </div>
+
+  <!-- SISTEMA 69 -->
+  <div class="s69-section">
+    <div class="s69-grid">
+
+      <div class="s69-row">
+        <div class="s69-lbl">Zero<span class="s69-sub">1/23 di giorno</span></div>
+        <span class="s69-val" id="v-zeri">00</span>
+        <span class="s69-of">/ 23</span>
+        <div class="bar-wrap"><div class="bar-track"><div class="bar-fill" id="b-zeri"></div></div></div>
+      </div>
+
+      <div class="s69-row">
+        <div class="s69-lbl">Primo<span class="s69-sub">1/69 di zero</span></div>
+        <span class="s69-val" id="v-primi">00</span>
+        <span class="s69-of">/ 69</span>
+        <div class="bar-wrap"><div class="bar-track"><div class="bar-fill" id="b-primi"></div></div></div>
+      </div>
+
+      <div class="s69-row">
+        <div class="s69-lbl">Secondo<span class="s69-sub">1/69 di primo</span></div>
+        <span class="s69-val" id="v-sec">00</span>
+        <span class="s69-of">/ 69</span>
+        <div class="bar-wrap"><div class="bar-track"><div class="bar-fill" id="b-sec"></div></div></div>
+      </div>
+
+      <div class="s69-row">
+        <div class="s69-lbl">69esimo<span class="s69-sub">1/69 di secondo</span></div>
+        <span class="s69-val" id="v-69">00</span>
+        <span class="s69-of">/ 69</span>
+        <div class="bar-wrap"><div class="bar-track"><div class="bar-fill" id="b-69"></div></div></div>
+      </div>
+
+      <div class="s69-row">
+        <div class="s69-lbl">4761esimo<span class="s69-sub">1/69 di 69esimo</span></div>
+        <span class="s69-val" id="v-4761">00</span>
+        <span class="s69-of">/ 69</span>
+        <div class="bar-wrap"><div class="bar-track"><div class="bar-fill" id="b-4761"></div></div></div>
+      </div>
+
+      <div class="s69-row">
+        <div class="s69-lbl">328509esimo<span class="s69-sub">1/69 di 4761esimo</span></div>
+        <span class="s69-val" id="v-328509">00</span>
+        <span class="s69-of">/ 69</span>
+        <div class="bar-wrap"><div class="bar-track"><div class="bar-fill" id="b-328509"></div></div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-txt">
+      Anno Zero · <span>28 settembre 2000 · 08:45:00</span><br>
+      1 giorno = 23 zeri · 1 zero = 69 primi
+    </div>
+    <div class="pulse"></div>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+const BIRTH          = new Date(2000, 8, 28, 8, 45, 0);
+const DAY_MS         = 86400000;
+const LUNAR_CYCLE_MS = 29.53058867 * DAY_MS;
+const KNOWN_NEW_MOON = new Date(Date.UTC(2000, 0, 6, 18, 14, 0));
+
+const ZERO_MS    = DAY_MS / 23;
+const PRIMO_MS   = ZERO_MS / 69;
+const SEC_MS     = PRIMO_MS / 69;
+const S69_MS     = SEC_MS / 69;
+const S4761_MS   = S69_MS / 69;
+const S328509_MS = S4761_MS / 69;
+
+const MONTH_NAMES = ['Luce','Crescita','Abbandono','Multiverso','Nascita','Comprensione',
+  'Ascesa','Portale','Discesa','Pineale','Controllo','Esistenza','Scissione'];
+const DAY_NAMES = ['Lucedì','Evodì','Soledì','Terradì','Lunedì','Pineadì','Oscuridì'];
+const PHASE_NAMES = ['Luna Nuova','Falce Crescente','Quarto Crescente','Gibbosa Crescente',
+  'Luna Piena','Gibbosa Calante','Quarto Calante'];
+
+function pad(n, l=2) { return String(Math.floor(n)).padStart(l,'0'); }
+
+// ── MOON ──
+function getMoonAge(d) {
+  return (((d - KNOWN_NEW_MOON) / LUNAR_CYCLE_MS) % 1 + 1) % 1 * 29.53058867;
+}
+function getPhaseIndex(age) {
+  if (age<1.85||age>=27.68) return 0;
+  if (age<6.38)  return 1; if (age<8.46)  return 2;
+  if (age<13.77) return 3; if (age<16.23) return 4;
+  if (age<21.54) return 5; if (age<25.00) return 6;
+  return 0;
+}
+function countFullMoons(now) {
+  const birthAge = getMoonAge(BIRTH);
+  let toFirst = 14.765 - birthAge; if (toFirst<0) toFirst+=29.53058867;
+  let c=0, cur=new Date(BIRTH.getTime()+toFirst*DAY_MS);
+  while(cur<=now){c++;cur=new Date(cur.getTime()+LUNAR_CYCLE_MS);}
+  return c;
+}
+
+function drawMoon(canvas, age) {
+  const ctx=canvas.getContext('2d'), W=canvas.width, R=W/2, r=R*0.88;
+  ctx.clearRect(0,0,W,W);
+  ctx.beginPath(); ctx.arc(R,R,r,0,Math.PI*2); ctx.fillStyle='#06070f'; ctx.fill();
+
+  const frac = (1-Math.cos((age/29.53058867)*2*Math.PI))/2;
+  const wax  = age<=14.765;
+  const tx=R, ty=R-r, bx=R, by=R+r;
+  const ellA=r*Math.abs(1-2*frac);
+
+  if(frac>0.01&&frac<0.99){
+    ctx.save();
+    ctx.beginPath(); ctx.arc(R,R,r,0,Math.PI*2); ctx.clip();
+    const g=ctx.createRadialGradient(R,R,0,R,R,r);
+    g.addColorStop(0,'#f0eed8'); g.addColorStop(0.7,'#d8d4c0'); g.addColorStop(1,'#a0a098');
+    ctx.beginPath(); ctx.arc(R,R,r,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
+    ctx.globalCompositeOperation='source-atop';
+    ctx.beginPath();
+    if(wax){
+      if(frac<0.5){ctx.ellipse(R,R,ellA,r,0,-Math.PI/2,Math.PI/2);ctx.arc(R,R,r,Math.PI/2,-Math.PI/2,true);}
+      else{ctx.ellipse(R,R,ellA,r,0,Math.PI/2,-Math.PI/2);ctx.arc(R,R,r,-Math.PI/2,Math.PI/2,true);}
+    } else {
+      if(frac<0.5){ctx.ellipse(R,R,ellA,r,0,Math.PI/2,-Math.PI/2);ctx.arc(R,R,r,-Math.PI/2,Math.PI/2);}
+      else{ctx.ellipse(R,R,ellA,r,0,-Math.PI/2,Math.PI/2);ctx.arc(R,R,r,Math.PI/2,-Math.PI/2);}
+    }
+    ctx.fillStyle='#040508'; ctx.fill();
+    ctx.globalCompositeOperation='source-over';
+    ctx.restore();
+  } else if(frac>=0.99){
+    const g=ctx.createRadialGradient(R,R,0,R,R,r);
+    g.addColorStop(0,'#f0eed8'); g.addColorStop(1,'#a0a098');
+    ctx.beginPath(); ctx.arc(R,R,r,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
+  }
+  // Halo
+  const halo=ctx.createRadialGradient(R,R,r-2,R,R,r+14);
+  halo.addColorStop(0,`rgba(200,207,224,${0.04+frac*0.08})`);
+  halo.addColorStop(1,'transparent');
+  ctx.beginPath(); ctx.arc(R,R,r+12,0,Math.PI*2); ctx.fillStyle=halo; ctx.fill();
+}
+
+// ── MAIN UPDATE ──
+function update() {
+  const now     = new Date();
+  const elapsed = now - BIRTH;
+  const totalMs = elapsed;
+
+  // ── LUNAR CALENDAR ──
+  const totalDays = Math.floor(elapsed / DAY_MS);
+  const anno      = Math.floor(totalDays / 364);
+  const dayOfYear = totalDays % 364;
+  const mese      = Math.floor(dayOfYear / 28);
+  const giorno    = (dayOfYear % 28) + 1;
+  const weekday   = totalDays % 7;
+
+  document.getElementById('cAnno').textContent    = anno;
+  document.getElementById('cMese').textContent    = MONTH_NAMES[mese];
+  document.getElementById('cMeseNum').textContent = (mese+1) + '/13';
+  document.getElementById('cGiorno').innerHTML    = pad(giorno) + '<span>/ 28</span>';
+  document.getElementById('cWeekday').textContent = DAY_NAMES[weekday];
+
+  // Moon
+  const age   = getMoonAge(now);
+  const phase = getPhaseIndex(age);
+  drawMoon(document.getElementById('mc'), age);
+  document.getElementById('phaseName').textContent = PHASE_NAMES[phase];
+  document.getElementById('fmCount').textContent   = countFullMoons(now) + ' lune piene dalla nascita';
+
+  // ── SISTEMA 69 ──
+  const dayMs = elapsed % DAY_MS;
+
+  const zt = dayMs / ZERO_MS;
+  const zeri = Math.floor(zt);
+  const r1 = dayMs - zeri * ZERO_MS;
+
+  const pt = r1 / PRIMO_MS;
+  const primi = Math.floor(pt);
+  const r2 = r1 - primi * PRIMO_MS;
+
+  const st = r2 / SEC_MS;
+  const sec = Math.floor(st);
+  const r3 = r2 - sec * SEC_MS;
+
+  const s69t = r3 / S69_MS;
+  const s69 = Math.floor(s69t);
+  const r4 = r3 - s69 * S69_MS;
+
+  const s4761t = r4 / S4761_MS;
+  const s4761 = Math.floor(s4761t);
+  const r5 = r4 - s4761 * S4761_MS;
+
+  const s328509 = Math.floor(r5 / S328509_MS) % 69;
+
+  function sv(id, val) { document.getElementById('v-'+id).textContent = pad(val); }
+  function sb(id, pct) { document.getElementById('b-'+id).style.width = (pct*100).toFixed(3)+'%'; }
+
+  sv('zeri',   zeri);   sb('zeri',   zt/23);
+  sv('primi',  primi);  sb('primi',  pt/69);
+  sv('sec',    sec);    sb('sec',    st/69);
+  sv('69',     s69);    sb('69',     s69t/69);
+  sv('4761',   s4761);  sb('4761',   s4761t/69);
+  sv('328509', s328509); sb('328509', s328509/69);
+}
+
+// ── STARS ──
+(function(){
+  const c=document.getElementById('stars');
+  for(let i=0;i<80;i++){
+    const s=document.createElement('div'); s.className='star';
+    const sz=Math.random()*1.8+0.4;
+    s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;
+      width:${sz}px;height:${sz}px;
+      --d:${(Math.random()*4+2).toFixed(1)}s;
+      --del:${(Math.random()*5).toFixed(1)}s;
+      --lo:${(Math.random()*0.08+0.03).toFixed(2)};
+      --hi:${(Math.random()*0.4+0.2).toFixed(2)};`;
+    c.appendChild(s);
+  }
+})();
+
+update();
+setInterval(update, 100);
+
+// Service Worker per PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+
+</body>
+</html>
